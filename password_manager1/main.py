@@ -48,7 +48,24 @@ def main():
 
         elif choice == 2:
             print_header("➕ ADD NEW CREDENTIAL")
-            site = input(Fore.WHITE + "Enter site/app name: ").strip()
+            
+            
+            POPULAR_SITES = ["Gmail", "GitHub", "Twitter", "Discord", "LinkedIn"]
+
+            print(Fore.CYAN + "\nSelect a site/app:")
+            for i, site_option in enumerate(POPULAR_SITES, start=1):
+                print(f"{Fore.YELLOW} {i}. {Fore.WHITE}{site_option}")
+            print(f"{Fore.YELLOW} {len(POPULAR_SITES) + 1}. {Fore.WHITE}Other (Type manually...)")
+
+            try:
+                site_choice = int(input(Fore.GREEN + "Choose option: " + Style.RESET_ALL))
+                if 1 <= site_choice <= len(POPULAR_SITES):
+                    site = POPULAR_SITES[site_choice - 1]
+                else:
+                    site = input(Fore.WHITE + "Enter custom site/app name: ").strip()
+            except ValueError:
+                site = input(Fore.WHITE + "Enter site/app name: ").strip()
+
             username = input(Fore.WHITE + "Enter username or email: ").strip()
             
             print(Fore.CYAN + "\nPassword Options:")
