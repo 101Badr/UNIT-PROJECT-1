@@ -1,8 +1,12 @@
 import json
 import os
 from models import VaultItem
+from dotenv import load_dotenv
 
-FILENAME = "passwords_data.json"
+
+load_dotenv()
+FILENAME = os.getenv("DATA_FILENAME", "passwords_data.json")
+
 
 def save_vault(items_list):
     
