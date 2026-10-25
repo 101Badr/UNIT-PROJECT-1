@@ -5,9 +5,11 @@ from models import VaultItem
 from file_manager import save_vault, load_vault
 
 init(autoreset=True)
+
 def generate_strong_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return "".join(random.choice(chars) for _ in range(length))
+
 def print_header(title):
     print(Fore.CYAN + Style.BRIGHT + "\n" + "=" * 50)
     print(Fore.CYAN + Style.BRIGHT + f"   {title}")
@@ -19,9 +21,11 @@ def show_menu():
     print(Fore.YELLOW + " 2. " + Fore.WHITE + "Add New Credential")
     print(Fore.YELLOW + " 3. " + Fore.WHITE + "Search Password by Site")
     print(Fore.YELLOW + " 4. " + Fore.WHITE + "Vault Statistics & Dashboard 📊")
-    print(Fore.YELLOW + " 5. " + Fore.WHITE + "Delete Account")
-    print(Fore.YELLOW + " 6. " + Fore.RED + "Exit")
+    print(Fore.YELLOW + " 5. " + Fore.WHITE + "Update / Edit Credential ✏️") 
+    print(Fore.YELLOW + " 6. " + Fore.WHITE + "Delete Account")             
+    print(Fore.YELLOW + " 7. " + Fore.RED + "Exit")                       
     print(Fore.CYAN + "-" * 50)
+
 def main():
     vault_items = load_vault()
 
@@ -29,9 +33,9 @@ def main():
         show_menu()
         
         try:
-            choice = int(input(Fore.GREEN + "Choose an option (1-6): " + Style.RESET_ALL))
+            choice = int(input(Fore.GREEN + "Choose an option (1-7): " + Style.RESET_ALL))
         except ValueError:
-            print(Fore.RED + "❌ Invalid input! Please enter a number between 1 and 6.")
+            print(Fore.RED + "❌ Invalid input! Please enter a number between 1 and 7.")
             continue
 
         if choice == 1:
@@ -143,7 +147,7 @@ def main():
         elif choice == 4:
             print_header("📊 VAULT DASHBOARD")
             total_accounts = len(vault_items)
-            sites = list(set([item.site_name.capitalize() for item in vault_items]))
+            sites = sorted(list(set(item.site_name.strip().capitalize() for item in vault_items)))
             
             print(Fore.YELLOW + f"📌 Total Saved Accounts : {Fore.WHITE}{total_accounts}")
             if total_accounts > 0:
@@ -153,6 +157,42 @@ def main():
                 print(Fore.LIGHTBLACK_EX + "💡 Tip: Add some accounts to view active analytics.")
 
         elif choice == 5:
+            print_header("✏️ UPDATE CREDENTIAL")
+            if not vault_items:
+                print(Fore.YELLOW + "📭 No accounts available to update.")
+                continue
+            
+            for index, item in enumerate(vault_items, start=1):
+                print(f"{Fore.MAGENTA}{index}. {Fore.WHITE}{item.site_name} ({item.username})")
+            print(Fore.RED + " b. Cancel / Go Back")
+            
+            upd_input = input(Fore.GREEN + "Enter the number to update (or 'b' to back): " + Style.RESET_ALL).strip()
+            if upd_input.lower() == 'b':
+                continue
+
+            try:
+                idx = int(upd_input) - 1
+                if 0 <= idx < len(vault_items):
+                    item = vault_items[idx]
+                    print(Fore.CYAN + f"\nEditing account for: {item.site_name}")
+                    print(Fore.LIGHTBLACK_EX + "💡 Press Enter to keep the old value without changes.")
+                    
+                    new_user = input(Fore.WHITE + f"New username [{item.username}]: ").strip()
+                    if new_user:
+                        item.username = new_user
+                        
+                    new_pass = input(Fore.WHITE + "New password (leave blank to keep old): ").strip()
+                    if new_pass:
+                        item.password = new_pass
+                        
+                    save_vault(vault_items)
+                    print(Fore.GREEN + f"✅ Account for '{item.site_name}' updated successfully!")
+                else:
+                    print(Fore.RED + "❌ Invalid account number.")
+            except ValueError:
+                print(Fore.RED + "❌ Please enter a valid number.")
+
+        elif choice == 6:
             print_header("🗑️ DELETE ACCOUNT")
             if not vault_items:
                 print(Fore.YELLOW + "📭 No accounts available to delete.")
@@ -177,8 +217,9 @@ def main():
             except ValueError:
                 print(Fore.RED + "❌ Please enter a valid number.")
 
-        elif choice == 6:
+        elif choice == 7:
             print(Fore.CYAN + Style.BRIGHT + "\n👋 Exiting Password Manager. Stay secure!")
             break
+
 if __name__ == "__main__":
     main()
