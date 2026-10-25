@@ -14,7 +14,7 @@ MASTER_CONFIG_FILE = "master_auth.json"
 KEY_FILENAME = "secret.key"
 
 def get_cipher():
-    """تحميل أو توليد مفتاح التشفير"""
+    
     if os.path.exists(KEY_FILENAME):
         with open(KEY_FILENAME, "rb") as key_file:
             key = key_file.read()
@@ -25,10 +25,10 @@ def get_cipher():
     return Fernet(key)
 
 def authenticate_user():
-    """نظام تسجيل ودخول رئيسي مشفر وآمن بالكامل"""
+    
     cipher = get_cipher()
     
-    # 1. إذا كان البرنامج يُفتح لأول مرة (لا يوجد ملف إعدادات مسجل)
+   
     if not os.path.exists(MASTER_CONFIG_FILE):
         print(Fore.CYAN + "\n" + "="*50)
         print(Fore.CYAN + "       🛡️ SECURE SETUP: CREATE MASTER ACCOUNT       ")
@@ -46,7 +46,7 @@ def authenticate_user():
                 break
             print(Fore.RED + "❌ Password is too short. Must be at least 4 characters.")
             
-        # تجهيز البيانات وتشفيرها قبل حفظها
+        
         auth_data = {"username": username, "password": password}
         json_data = json.dumps(auth_data, ensure_ascii=False, indent=4)
         encrypted_data = cipher.encrypt(json_data.encode('utf-8'))
@@ -56,7 +56,7 @@ def authenticate_user():
             
         print(Fore.GREEN + "\n✨ Encrypted Master account created successfully! Let's log in now.\n")
 
-    # 2. قراءة وفك تشفير ملف المصادقة للتحقق من الدخول
+    
     try:
         with open(MASTER_CONFIG_FILE, "rb") as f:
             encrypted_data = f.read()
