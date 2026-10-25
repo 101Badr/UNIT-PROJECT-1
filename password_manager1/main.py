@@ -1,14 +1,117 @@
 import random
 import string
+import re
+import sys
+import json
+import os
 from colorama import Fore, Style, init
 from models import VaultItem
 from file_manager import save_vault, load_vault
+from cryptography.fernet import Fernet
 
-init(autoreset=True)
+
+MASTER_CONFIG_FILE = "master_auth.json"
+KEY_FILENAME = "secret.key"
+
+def get_cipher():
+    """تحميل أو توليد مفتاح التشفير"""
+    if os.path.exists(KEY_FILENAME):
+        with open(KEY_FILENAME, "rb") as key_file:
+            key = key_file.read()
+    else:
+        key = Fernet.generate_key()
+        with open(KEY_FILENAME, "wb") as key_file:
+            key_file.write(key)
+    return Fernet(key)
+
+def authenticate_user():
+    """نظام تسجيل ودخول رئيسي مشفر وآمن بالكامل"""
+    cipher = get_cipher()
+    
+    # 1. إذا كان البرنامج يُفتح لأول مرة (لا يوجد ملف إعدادات مسجل)
+    if not os.path.exists(MASTER_CONFIG_FILE):
+        print(Fore.CYAN + "\n" + "="*50)
+        print(Fore.CYAN + "       🛡️ SECURE SETUP: CREATE MASTER ACCOUNT       ")
+        print(Fore.CYAN + "="*50)
+        
+        while True:
+            username = input(Fore.WHITE + "👤 Enter a new Master Username: ").strip()
+            if username:
+                break
+            print(Fore.RED + "❌ Username cannot be empty. Please try again.")
+            
+        while True:
+            password = input(Fore.WHITE + "🔑 Enter a strong Master Password (min 4 chars): ").strip()
+            if len(password) >= 4:
+                break
+            print(Fore.RED + "❌ Password is too short. Must be at least 4 characters.")
+            
+        # تجهيز البيانات وتشفيرها قبل حفظها
+        auth_data = {"username": username, "password": password}
+        json_data = json.dumps(auth_data, ensure_ascii=False, indent=4)
+        encrypted_data = cipher.encrypt(json_data.encode('utf-8'))
+        
+        with open(MASTER_CONFIG_FILE, "wb") as f:
+            f.write(encrypted_data)
+            
+        print(Fore.GREEN + "\n✨ Encrypted Master account created successfully! Let's log in now.\n")
+
+    # 2. قراءة وفك تشفير ملف المصادقة للتحقق من الدخول
+    try:
+        with open(MASTER_CONFIG_FILE, "rb") as f:
+            encrypted_data = f.read()
+            decrypted_data = cipher.decrypt(encrypted_data)
+            auth_data = json.loads(decrypted_data.decode('utf-8'))
+    except Exception as e:
+        print(Fore.RED + f"❌ Error loading authentication data: {e}")
+        sys.exit()
+        
+    print(Fore.CYAN + "\n" + "="*50)
+    print(Fore.CYAN + "               🔒 SECURE MASTER LOGIN               ")
+    print(Fore.CYAN + "="*50)
+    
+    attempts = 3
+    while attempts > 0:
+        username_input = input(Fore.WHITE + "👤 Master Username: ").strip()
+        password_input = input(Fore.WHITE + "🔑 Master Password: ").strip()
+        
+        if username_input == auth_data["username"] and password_input == auth_data["password"]:
+            print(Fore.GREEN + "\n" + "—"*50)
+            print(Fore.GREEN + "  ✅ Access Granted! Welcome to your Secure Vault.")
+            print(Fore.GREEN + "—"*50 + "\n")
+            return True
+        else:
+            attempts -= 1
+            print(Fore.RED + f"❌ Incorrect username or password! Attempts left: {attempts}\n")
+            
+    print(Fore.RED + "⛔ Too many failed login attempts. Exiting program for security.")
+    sys.exit()
 
 def generate_strong_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return "".join(random.choice(chars) for _ in range(length))
+def check_password_strength(password):
+    if len(password) < 6:
+        return Fore.RED + "Weak 🔴 (Too short)"
+    
+    score = 0
+    if len(password) >= 8:
+        score += 1
+    if len(password) >= 12:
+        score += 1
+    if any(c.islower() for c in password) and any(c.isupper() for c in password):
+        score += 1
+    if any(c.isdigit() for c in password):
+        score += 1
+    if any(c in "!@#$%^&*()" for c in password):
+        score += 1
+
+    if score <= 2:
+        return Fore.RED + "Weak 🔴"
+    elif score <= 4:
+        return Fore.YELLOW + "Medium 🟡"
+    else:
+        return Fore.GREEN + "Strong 🟢"
 
 def print_header(title):
     print(Fore.CYAN + Style.BRIGHT + "\n" + "=" * 50)
@@ -87,13 +190,18 @@ def main():
                         step = 2
 
                 elif step == 2:
-                    user_input = input(Fore.WHITE + "Enter username or email (type 'b' to go back): ").strip()
+                    user_input = input(Fore.WHITE + "Enter valid email (type 'b' to go back): ").strip()
                     if user_input.lower() == 'b':
                         step = 1
                         continue
-                    if user_input:
+                    
+                    
+                    if "@" in user_input and "." in user_input and len(user_input) > 5:
                         username = user_input
                         step = 3
+                    else:
+                        print(Fore.RED + "❌ Invalid email format! Please enter a valid email (e.g., name@example.com).")
+                        
 
                 elif step == 3:
                     print(Fore.CYAN + "\nPassword Options:")
@@ -119,6 +227,8 @@ def main():
                         pass_input = input(Fore.WHITE + "Enter password (or 'b' to back): ").strip()
                         if pass_input.lower() == 'b':
                             continue
+                        strength = check_password_strength(pass_input)
+                        print(Fore.CYAN + f"📊 Password Strength: {strength}")
                         password = pass_input
                         break
 
@@ -222,4 +332,5 @@ def main():
             break
 
 if __name__ == "__main__":
+    authenticate_user()
     main()
