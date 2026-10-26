@@ -10,6 +10,7 @@ from colorama import Fore, Style, init
 from cryptography.fernet import Fernet
 from file_manager import load_vault, save_vault
 from models import VaultItem
+from activity_logger import log_activity, show_activity_log
 
 init(autoreset=True)
 
@@ -76,6 +77,7 @@ def authenticate_user():
         if username_input == auth_data["username"] and password_input == auth_data["password"]:
             print(Fore.GREEN + "\n" + "—"*50)
             print(Fore.GREEN + "  ✅ Access Granted! Welcome to your Secure Vault.")
+            log_activity("LOGIN_SUCCESS")
             print(Fore.GREEN + "—"*50 + "\n")
             return True
         else:
@@ -125,8 +127,9 @@ def show_menu():
     print(Fore.YELLOW + " 4. " + Fore.WHITE + "Vault Statistics & Dashboard 📊")
     print(Fore.YELLOW + " 5. " + Fore.WHITE + "Update / Edit Credential ✏️") 
     print(Fore.YELLOW + " 6. " + Fore.WHITE + "Delete Account")
-    print(Fore.YELLOW + " 7. " + Fore.WHITE + "Encrypted Backup & Restore 💾")            
-    print(Fore.YELLOW + " 8. " + Fore.RED + "Exit")                     
+    print(Fore.YELLOW + " 7. " + Fore.WHITE + "Encrypted Backup & Restore 💾")
+    print(Fore.YELLOW + " 8. " + Fore.WHITE + "View Security Activity Log 📜")            
+    print(Fore.YELLOW + " 9. " + Fore.RED + "Exit")                     
     print(Fore.CYAN + "-" * 50)
 
 def main():
@@ -136,7 +139,7 @@ def main():
         show_menu()
         
         try:
-            choice = int(input(Fore.GREEN + "Choose an option (1-8): " + Style.RESET_ALL))
+            choice = int(input(Fore.GREEN + "Choose an option (1-9): " + Style.RESET_ALL))
         except ValueError:
             print(Fore.RED + "❌ Invalid input! Please enter a number between 1 and 8.")
             continue
@@ -243,6 +246,7 @@ def main():
                 vault_items.append(new_item)
                 save_vault(vault_items)
                 print(Fore.GREEN + "\n✅ Credential added and securely saved successfully!")
+                log_activity("ACCOUNT_ADDED")
 
         elif choice == 3:
             print_header("🔍 ADVANCED SEARCH")
@@ -256,9 +260,11 @@ def main():
                     print(Fore.GREEN + f"\n🌐 Site: {Fore.WHITE}{item.site_name}")
                     print(Fore.GREEN + f"👤 Username: {Fore.WHITE}{item.username}")
                     print(Fore.GREEN + f"🔑 Password: {Fore.YELLOW}{Style.BRIGHT}{item.password}")
+                    
                     found = True
             if not found:
                 print(Fore.RED + "❌ No matching account found.")
+        
 
         elif choice == 4:
             print_header("📊 VAULT DASHBOARD")
@@ -302,6 +308,7 @@ def main():
                         item.password = new_pass
                         
                     save_vault(vault_items)
+                    log_activity("ACCOUNT_UPDATED")
                     print(Fore.GREEN + f"✅ Account for '{item.site_name}' updated successfully!")
                 else:
                     print(Fore.RED + "❌ Invalid account number.")
@@ -327,6 +334,7 @@ def main():
                 if 0 <= idx < len(vault_items):
                     removed = vault_items.pop(idx)
                     save_vault(vault_items)
+                    log_activity("ACCOUNT_DELETED")
                     print(Fore.GREEN + f"🗑️ Account for '{removed.site_name}' deleted successfully!")
                 else:
                     print(Fore.RED + "❌ Invalid account number.")
@@ -349,9 +357,13 @@ def main():
                 pass
             else:
                 print(Fore.RED + "❌ Invalid choice.")
-
+        
         elif choice == 8:
+            
+                    show_activity_log()
+        elif choice == 9:
             print(Fore.CYAN + Style.BRIGHT + "\n👋 Exiting Password Manager. Stay secure!")
+            log_activity("LOGOUT")
             break
 
 if __name__ == "__main__":

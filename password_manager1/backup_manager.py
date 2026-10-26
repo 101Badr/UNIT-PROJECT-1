@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-
+from activity_logger import log_activity
 from colorama import Fore, Style
 from cryptography.fernet import Fernet
 
@@ -39,7 +39,7 @@ def create_encrypted_backup():
         
         with open(backup_path, "wb") as backup_file:
             backup_file.write(encrypted_data)
-            
+        log_activity("BACKUP_CREATED")    
         print(Fore.GREEN + f"✅ Encrypted backup created successfully: {backup_filename}")
         
     except Exception as e:
@@ -93,7 +93,7 @@ def restore_backup():
                 
                 with open("passwords_data.json", "wb") as f:
                     f.write(decrypted_data)
-                    
+                log_activity("RESTORE_BACKUP")
                 print(Fore.GREEN + f"✨ Successfully restored data from {backups[idx]}!")
             else:
                 print(Fore.YELLOW + "❌ Restore cancelled.")
