@@ -3,11 +3,13 @@ import string
 import re
 import sys
 import json
+import getpass
 import os
 from colorama import Fore, Style, init
 from models import VaultItem
 from file_manager import save_vault, load_vault
 from cryptography.fernet import Fernet
+from backup_manager import create_encrypted_backup, restore_backup
 
 
 MASTER_CONFIG_FILE = "master_auth.json"
@@ -73,7 +75,7 @@ def authenticate_user():
     attempts = 3
     while attempts > 0:
         username_input = input(Fore.WHITE + "👤 Master Username: ").strip()
-        password_input = input(Fore.WHITE + "🔑 Master Password: ").strip()
+        password_input = getpass.getpass(Fore.WHITE + "🔑 Master Password: ").strip()
         
         if username_input == auth_data["username"] and password_input == auth_data["password"]:
             print(Fore.GREEN + "\n" + "—"*50)
@@ -125,7 +127,8 @@ def show_menu():
     print(Fore.YELLOW + " 3. " + Fore.WHITE + "Search Password by Site")
     print(Fore.YELLOW + " 4. " + Fore.WHITE + "Vault Statistics & Dashboard 📊")
     print(Fore.YELLOW + " 5. " + Fore.WHITE + "Update / Edit Credential ✏️") 
-    print(Fore.YELLOW + " 6. " + Fore.WHITE + "Delete Account")             
+    print(Fore.YELLOW + " 6. " + Fore.WHITE + "Delete Account")
+    print(f"{Fore.YELLOW} 8. {Fore.WHITE}Encrypted Backup & Restore 💾")             
     print(Fore.YELLOW + " 7. " + Fore.RED + "Exit")                       
     print(Fore.CYAN + "-" * 50)
 
@@ -195,13 +198,11 @@ def main():
                         step = 1
                         continue
                     
-                    
                     if "@" in user_input and "." in user_input and len(user_input) > 5:
                         username = user_input
                         step = 3
                     else:
                         print(Fore.RED + "❌ Invalid email format! Please enter a valid email (e.g., name@example.com).")
-                        
 
                 elif step == 3:
                     print(Fore.CYAN + "\nPassword Options:")
@@ -220,23 +221,34 @@ def main():
                         pwd_choice = 1
 
                     if pwd_choice == 2:
-                        password = generate_strong_password()
+                        import random
+                        import string
+                        chars = string.ascii_letters + string.digits + "!@#$%^&*"
+                        password = "".join(random.choice(chars) for _ in range(12))
                         print(Fore.GREEN + f"🔑 Generated Strong Password: {Style.BRIGHT}{password}")
                         break
                     else:
                         pass_input = input(Fore.WHITE + "Enter password (or 'b' to back): ").strip()
                         if pass_input.lower() == 'b':
                             continue
-                        strength = check_password_strength(pass_input)
+                        
+                        score = 0
+                        if len(pass_input) >= 8: score += 1
+                        if any(c.isupper() for c in pass_input): score += 1
+                        if any(c.islower() for c in pass_input): score += 1
+                        if any(c.isdigit() for c in pass_input): score += 1
+                        if any(not c.isalnum() for c in pass_input): score += 1
+                        
+                        if score <= 2:
+                            strength = "🔴 Weak"
+                        elif score <= 4:
+                            strength = "🟡 Medium"
+                        else:
+                            strength = "🟢 Strong"
+                            
                         print(Fore.CYAN + f"📊 Password Strength: {strength}")
                         password = pass_input
                         break
-
-            if site and username and password:
-                new_item = VaultItem(site, username, password)
-                vault_items.append(new_item)
-                save_vault(vault_items)
-                print(Fore.GREEN + f"✅ Credentials for '{site}' added successfully!")
 
         elif choice == 3:
             print_header("🔍 ADVANCED SEARCH")
@@ -326,10 +338,26 @@ def main():
                     print(Fore.RED + "❌ Invalid account number.")
             except ValueError:
                 print(Fore.RED + "❌ Please enter a valid number.")
+        elif choice == 8:
+            print_header("💾 BACKUP & RESTORE MANAGEMENT")
+            print(Fore.CYAN + "1. Create Encrypted Backup")
+            print(Fore.CYAN + "2. Restore From Backup")
+            print(Fore.YELLOW + "b. Back to Main Menu")
+            
+            b_choice = input(Fore.GREEN + "Choose option (1-2) or 'b': " + Style.RESET_ALL).strip()
+            if b_choice == '1':
+                create_encrypted_backup()
+            elif b_choice == '2':
+                restore_backup()
+            elif b_choice.lower() == 'b':
+                pass
+            else:
+                print(Fore.RED + "❌ Invalid choice.")
 
         elif choice == 7:
             print(Fore.CYAN + Style.BRIGHT + "\n👋 Exiting Password Manager. Stay secure!")
             break
+        
 
 if __name__ == "__main__":
     authenticate_user()

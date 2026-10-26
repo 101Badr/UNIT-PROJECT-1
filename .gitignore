@@ -222,3 +222,4 @@ __marimo__/
 passwords_data.json
 secret.key
 master_auth.json
+backups/
