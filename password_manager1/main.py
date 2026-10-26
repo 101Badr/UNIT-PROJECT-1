@@ -1,22 +1,22 @@
+import getpass
+import json
+import os
 import random
 import string
-import re
 import sys
-import json
-import getpass
-import os
-from colorama import Fore, Style, init
-from models import VaultItem
-from file_manager import save_vault, load_vault
-from cryptography.fernet import Fernet
-from backup_manager import create_encrypted_backup, restore_backup
 
+from backup_manager import create_encrypted_backup, restore_backup
+from colorama import Fore, Style, init
+from cryptography.fernet import Fernet
+from file_manager import load_vault, save_vault
+from models import VaultItem
+
+init(autoreset=True)
 
 MASTER_CONFIG_FILE = "master_auth.json"
 KEY_FILENAME = "secret.key"
 
 def get_cipher():
-    
     if os.path.exists(KEY_FILENAME):
         with open(KEY_FILENAME, "rb") as key_file:
             key = key_file.read()
@@ -27,10 +27,8 @@ def get_cipher():
     return Fernet(key)
 
 def authenticate_user():
-    
     cipher = get_cipher()
     
-   
     if not os.path.exists(MASTER_CONFIG_FILE):
         print(Fore.CYAN + "\n" + "="*50)
         print(Fore.CYAN + "       🛡️ SECURE SETUP: CREATE MASTER ACCOUNT       ")
@@ -48,7 +46,6 @@ def authenticate_user():
                 break
             print(Fore.RED + "❌ Password is too short. Must be at least 4 characters.")
             
-        
         auth_data = {"username": username, "password": password}
         json_data = json.dumps(auth_data, ensure_ascii=False, indent=4)
         encrypted_data = cipher.encrypt(json_data.encode('utf-8'))
@@ -58,7 +55,6 @@ def authenticate_user():
             
         print(Fore.GREEN + "\n✨ Encrypted Master account created successfully! Let's log in now.\n")
 
-    
     try:
         with open(MASTER_CONFIG_FILE, "rb") as f:
             encrypted_data = f.read()
@@ -69,7 +65,7 @@ def authenticate_user():
         sys.exit()
         
     print(Fore.CYAN + "\n" + "="*50)
-    print(Fore.CYAN + "               🔒 SECURE MASTER LOGIN               ")
+    print(Fore.CYAN + "                🔒 SECURE MASTER LOGIN                ")
     print(Fore.CYAN + "="*50)
     
     attempts = 3
@@ -92,6 +88,7 @@ def authenticate_user():
 def generate_strong_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return "".join(random.choice(chars) for _ in range(length))
+
 def check_password_strength(password):
     if len(password) < 6:
         return Fore.RED + "Weak 🔴 (Too short)"
@@ -128,8 +125,8 @@ def show_menu():
     print(Fore.YELLOW + " 4. " + Fore.WHITE + "Vault Statistics & Dashboard 📊")
     print(Fore.YELLOW + " 5. " + Fore.WHITE + "Update / Edit Credential ✏️") 
     print(Fore.YELLOW + " 6. " + Fore.WHITE + "Delete Account")
-    print(f"{Fore.YELLOW} 8. {Fore.WHITE}Encrypted Backup & Restore 💾")             
-    print(Fore.YELLOW + " 7. " + Fore.RED + "Exit")                       
+    print(Fore.YELLOW + " 7. " + Fore.WHITE + "Encrypted Backup & Restore 💾")            
+    print(Fore.YELLOW + " 8. " + Fore.RED + "Exit")                     
     print(Fore.CYAN + "-" * 50)
 
 def main():
@@ -139,9 +136,9 @@ def main():
         show_menu()
         
         try:
-            choice = int(input(Fore.GREEN + "Choose an option (1-7): " + Style.RESET_ALL))
+            choice = int(input(Fore.GREEN + "Choose an option (1-8): " + Style.RESET_ALL))
         except ValueError:
-            print(Fore.RED + "❌ Invalid input! Please enter a number between 1 and 7.")
+            print(Fore.RED + "❌ Invalid input! Please enter a number between 1 and 8.")
             continue
 
         if choice == 1:
@@ -163,6 +160,8 @@ def main():
             password = ""
             
             step = 1
+            back_to_menu = False
+            
             while step <= 3:
                 if step == 1:
                     print(Fore.CYAN + "\nSelect a site/app:")
@@ -173,6 +172,7 @@ def main():
 
                     site_input = input(Fore.GREEN + "Choose option or type 'b': " + Style.RESET_ALL).strip()
                     if site_input.lower() == 'b':
+                        back_to_menu = True
                         break
                     
                     try:
@@ -180,29 +180,29 @@ def main():
                         if 1 <= site_choice <= len(POPULAR_SITES):
                             site = POPULAR_SITES[site_choice - 1]
                             step = 2
-                        else:
+                        elif site_choice == len(POPULAR_SITES) + 1:
                             custom_site = input(Fore.WHITE + "Enter custom site/app name (or 'b' to back): ").strip()
                             if custom_site.lower() == 'b':
                                 continue
                             site = custom_site
                             step = 2
+                        else:
+                            print(Fore.RED + "❌ Invalid choice number.")
                     except ValueError:
-                        if site_input.lower() == 'b':
-                            break
                         site = site_input
                         step = 2
 
                 elif step == 2:
-                    user_input = input(Fore.WHITE + "Enter valid email (type 'b' to go back): ").strip()
+                    user_input = input(Fore.WHITE + "Enter username or email (type 'b' to go back): ").strip()
                     if user_input.lower() == 'b':
                         step = 1
                         continue
                     
-                    if "@" in user_input and "." in user_input and len(user_input) > 5:
+                    if len(user_input) > 0:
                         username = user_input
                         step = 3
                     else:
-                        print(Fore.RED + "❌ Invalid email format! Please enter a valid email (e.g., name@example.com).")
+                        print(Fore.RED + "❌ Username cannot be empty.")
 
                 elif step == 3:
                     print(Fore.CYAN + "\nPassword Options:")
@@ -221,10 +221,7 @@ def main():
                         pwd_choice = 1
 
                     if pwd_choice == 2:
-                        import random
-                        import string
-                        chars = string.ascii_letters + string.digits + "!@#$%^&*"
-                        password = "".join(random.choice(chars) for _ in range(12))
+                        password = generate_strong_password(12)
                         print(Fore.GREEN + f"🔑 Generated Strong Password: {Style.BRIGHT}{password}")
                         break
                     else:
@@ -232,23 +229,20 @@ def main():
                         if pass_input.lower() == 'b':
                             continue
                         
-                        score = 0
-                        if len(pass_input) >= 8: score += 1
-                        if any(c.isupper() for c in pass_input): score += 1
-                        if any(c.islower() for c in pass_input): score += 1
-                        if any(c.isdigit() for c in pass_input): score += 1
-                        if any(not c.isalnum() for c in pass_input): score += 1
-                        
-                        if score <= 2:
-                            strength = "🔴 Weak"
-                        elif score <= 4:
-                            strength = "🟡 Medium"
-                        else:
-                            strength = "🟢 Strong"
-                            
+                        strength = check_password_strength(pass_input)
                         print(Fore.CYAN + f"📊 Password Strength: {strength}")
                         password = pass_input
                         break
+
+            if back_to_menu:
+                continue
+
+            if site and username and password:
+                new_item = VaultItem(site_name=site, username=username, password=password)
+                vault_items = load_vault()
+                vault_items.append(new_item)
+                save_vault(vault_items)
+                print(Fore.GREEN + "\n✅ Credential added and securely saved successfully!")
 
         elif choice == 3:
             print_header("🔍 ADVANCED SEARCH")
@@ -274,7 +268,7 @@ def main():
             print(Fore.YELLOW + f"📌 Total Saved Accounts : {Fore.WHITE}{total_accounts}")
             if total_accounts > 0:
                 print(Fore.YELLOW + f"🌐 Unique Sites Managed : {Fore.WHITE}{', '.join(sites)}")
-                print(Fore.GREEN + f"🛡️  Security Status     : ACTIVE (Masked & Protected)")
+                print(Fore.GREEN + "🛡️  Security Status     : ACTIVE (Masked & Protected)")
             else:
                 print(Fore.LIGHTBLACK_EX + "💡 Tip: Add some accounts to view active analytics.")
 
@@ -338,7 +332,8 @@ def main():
                     print(Fore.RED + "❌ Invalid account number.")
             except ValueError:
                 print(Fore.RED + "❌ Please enter a valid number.")
-        elif choice == 8:
+
+        elif choice == 7:
             print_header("💾 BACKUP & RESTORE MANAGEMENT")
             print(Fore.CYAN + "1. Create Encrypted Backup")
             print(Fore.CYAN + "2. Restore From Backup")
@@ -349,15 +344,15 @@ def main():
                 create_encrypted_backup()
             elif b_choice == '2':
                 restore_backup()
+                vault_items = load_vault() 
             elif b_choice.lower() == 'b':
                 pass
             else:
                 print(Fore.RED + "❌ Invalid choice.")
 
-        elif choice == 7:
+        elif choice == 8:
             print(Fore.CYAN + Style.BRIGHT + "\n👋 Exiting Password Manager. Stay secure!")
             break
-        
 
 if __name__ == "__main__":
     authenticate_user()

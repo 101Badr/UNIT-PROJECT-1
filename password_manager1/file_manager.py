@@ -1,8 +1,9 @@
 import json
 import os
+
 from cryptography.fernet import Fernet
-from models import VaultItem
 from dotenv import load_dotenv
+from models import VaultItem
 
 load_dotenv()
 FILENAME = os.getenv("DATA_FILENAME", "passwords_data.json")
